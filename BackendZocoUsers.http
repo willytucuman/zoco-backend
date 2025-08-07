@@ -1,0 +1,6 @@
+@BackendZocoUsers_HostAddress = http://localhost:5260
+
+GET {{BackendZocoUsers_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
