@@ -61,7 +61,11 @@ builder.Services.AddScoped<AuthService>();
 
 var app = builder.Build();
 
-
+using (var scope = app.Services.CreateScope())
+{
+    var ctx = scope.ServiceProvider.GetRequiredService<BackendZocoUsers.Data.AppDbContext>();
+    await BackendZocoUsers.Data.DbSeeder.RunAsync(ctx);
+}
 
 app.UseSwagger();
 app.UseSwaggerUI();
