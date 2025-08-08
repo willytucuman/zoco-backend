@@ -49,11 +49,18 @@ namespace BackendZocoUsers.Controllers
             {
                 address.UserId = Guid.Parse(userId!);
             }
+            else
+            {
+                if (address.UserId == Guid.Empty) return BadRequest(new { error = "UserId es requerido para Admin" });
+                var exists = await _context.Users.AnyAsync(u => u.Id == address.UserId);
+                if (!exists) return BadRequest(new { error = "UserId no existe" });
+            }
 
             _context.Addresses.Add(address);
             await _context.SaveChangesAsync();
             return Ok(address);
         }
+
 
         // ✏️ Editar dirección (actualización parcial)
         [HttpPut("{id}")]

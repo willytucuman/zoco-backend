@@ -37,8 +37,7 @@ namespace BackendZocoUsers.Controllers
             var studies = await query.ToListAsync();
             return Ok(studies);
         }
-
-        // ✅ Crear un nuevo estudio
+        // Crear un estudio
         [HttpPost]
         public async Task<IActionResult> Create(Study study)
         {
@@ -49,11 +48,18 @@ namespace BackendZocoUsers.Controllers
             {
                 study.UserId = Guid.Parse(userId!);
             }
+            else
+            {
+                if (study.UserId == Guid.Empty) return BadRequest(new { error = "UserId es requerido para Admin" });
+                var exists = await _context.Users.AnyAsync(u => u.Id == study.UserId);
+                if (!exists) return BadRequest(new { error = "UserId no existe" });
+            }
 
             _context.Studies.Add(study);
             await _context.SaveChangesAsync();
             return Ok(study);
         }
+
 
         // ✏️ Editar un estudio
         [HttpPut("{id}")]

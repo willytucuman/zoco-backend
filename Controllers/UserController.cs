@@ -1,4 +1,5 @@
 ﻿using BackendZocoUsers.Data;
+using BackendZocoUsers.DTOs.Users;
 using BackendZocoUsers.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,17 +46,25 @@ namespace BackendZocoUsers.Controllers
             return Ok(user);
         }
 
-        // ✏️ Editar datos propios
         [HttpPut("me")]
         [Authorize]
-        public async Task<IActionResult> UpdateMe(User updateRequest)
+        public async Task<IActionResult> UpdateMe([FromBody] UpdateMeRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var user = await _context.Users.FindAsync(Guid.Parse(userId!));
             if (user == null) return NotFound();
 
-            user.Name = updateRequest.Name;
-            user.Email = updateRequest.Email;
+            // Si envían email, opcional: validar que no esté usado por otro
+            if (!string.IsNullOrWhiteSpace(request.Email))
+            {
+                var exists = await _context.Users
+                    .AnyAsync(u => u.Email == request.Email && u.Id != user.Id);
+                if (exists) return BadRequest(new { error = "El email ya está en uso." });
+                user.Email = request.Email;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Name))
+                user.Name = request.Name;
 
             await _context.SaveChangesAsync();
             return NoContent();
@@ -72,6 +81,32 @@ namespace BackendZocoUsers.Controllers
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        // crear un usuario (solo admin)
+        [HttpPost]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Create([FromBody] CreateUserRequest req)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == req.Email))
+                return BadRequest(new { error = "El email ya está registrado." });
+
+            Role roleParsed = Role.User;
+            if (!Enum.TryParse<Role>(req.Role, true, out roleParsed))
+                return BadRequest(new { error = "Rol inválido (use Admin o User)." });
+
+            var user = new User
+            {
+                Name = req.Name,
+                Email = req.Email,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+                Role = roleParsed
+            };
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { user.Id, user.Name, user.Email, Role = user.Role.ToString() });
         }
     }
 }

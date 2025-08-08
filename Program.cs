@@ -58,8 +58,15 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddScoped<JwtHelper>();
 builder.Services.AddScoped<AuthService>();
-
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowVite",
+        p => p.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 var app = builder.Build();
+app.UseCors("AllowVite");
 
 using (var scope = app.Services.CreateScope())
 {
